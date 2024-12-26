@@ -1,29 +1,54 @@
-import httpx
+import aiohttp
 import asyncio
 import json
 
 def read_cookies_and_api_type(file_path):
     cookies_list = []
-    api_type = None
     cookies = {}
     with open(file_path, 'r') as f:
         for line in f:
             line = line.strip()
-            if line and not line.startswith('#'):  
+            if line and not line.startswith('#'):
                 try:
                     key, value = line.split('=', 1)
                     if key == "api_type":
-                        api_type = value
+                        cookies["api_type"] = value
                     else:
                         cookies[key] = value
                 except ValueError:
-                    continue  
+                    continue
 
-            if api_type and cookies:
-                cookies_list.append((cookies, api_type))
+            if "api_type" in cookies and cookies:
+                cookies_list.append(cookies)
                 cookies = {}
-                api_type = None 
     return cookies_list
+
+def remove_account(file_path, cookies_to_remove):
+    lines_to_keep = []
+    skip = False
+
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if line.startswith("3PSIDMC") and line.split('=')[1] == cookies_to_remove.get("3PSIDMC"):
+            skip = True
+            i += 1
+            while i < len(lines) and '=' in lines[i]:
+                i += 1
+        elif line.startswith("3PSIDMCPP") and line.split('=')[1] == cookies_to_remove.get("3PSIDMCPP"):
+            skip = True
+            i += 1
+            while i < len(lines) and '=' in lines[i]:
+                i += 1
+        else:
+            lines_to_keep.append(lines[i])
+            i += 1
+
+    with open(file_path, 'w') as f:
+        f.writelines(lines_to_keep)
 
 async def send_friend_request():
     cookies_list = read_cookies_and_api_type('cookie.txt')
@@ -32,12 +57,12 @@ async def send_friend_request():
         print("Error: No valid cookies found in cookie.txt")
         return
 
-    for cookies, api_type in cookies_list:
-        if not api_type:
+    for cookies in cookies_list:
+        api_type = cookies.get("api_type")
+        if not api_type or not cookies:
             print("Error: 'api_type' not found for an account")
             continue
 
-        print(f"Using API Type: {api_type}")
         print(f"Cookies read from file: {cookies}")
 
         url = f"https://{api_type}.bloxd.io/social/send-friend-request"
@@ -66,7 +91,7 @@ async def send_friend_request():
                 "3PSIDMCSP": "0j0f03K6J009m00000001j0010s07wILM91p0q000R00tsw00B000J01bW71"
             },
             "contents": {
-                "requestToPlayerName": "" #send req username
+                "requestToPlayerName": "interactive"
             }
         }
 
@@ -75,13 +100,17 @@ async def send_friend_request():
         print(json.dumps(data, indent=4))
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, cookies=cookies, json=data)
-                print(f"Response Status Code: {response.status_code}")
-                print(f"Response Content: {response.text[:200]}")
-        except httpx.RequestError as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, cookies=cookies, json=data) as response:
+                    if response.status == 401:
+                        print(f"401 Unauthorized Error: Deleting account with 3PSIDMC or 3PSIDMCPP")
+                        remove_account('cookie.txt', cookies)
+                        print(f"Account with matching cookies has been removed from cookie.txt")
+                        continue
+                    response_text = await response.text()
+                    print(f"Response Status Code: {response.status}")
+                    print(f"Response Content: {response_text[:200]}")
+        except aiohttp.ClientError as e:
             print(f"Request Error: {e}")
-        except httpx.ConnectError as e:
-            print(f"Connection Error: {e}")
 
 asyncio.run(send_friend_request())
