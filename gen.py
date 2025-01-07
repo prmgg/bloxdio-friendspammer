@@ -15,7 +15,7 @@ def create_driver():
     return webdriver.Firefox(service=service, options=options)
 
 async def send_request(secure_3psidmc):
-    metric_url = "https://bloxd.io/metrics/cookies"
+    metric_url = "https://bloxd.io/index/metrics/cookies"
     social_base_url = "https://social{social_id}.bloxd.io/social/get-social-information"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
@@ -39,7 +39,7 @@ async def send_request(secure_3psidmc):
             "1PSID": "N/A",
             "3PSIDMC": secure_3psidmc,
             "3PSIDMCPP": "N/A",
-            "3PSIDMCSP": "0j0f03K6J009m00000001j0010s07wILM91p0q000R00tsw00B000J01bW71"
+            "3PSIDMCSP": "0j0f03K6J009m00010001j0010s07wILM91p0q000R00tsw00B000J01bW71"
         }
     }
 
@@ -61,7 +61,7 @@ async def send_request(secure_3psidmc):
                                 "3PSID": "N/A",
                                 "3PSIDMC": secure_3psidmc,
                                 "3PSIDMCPP": metric_3psidmcpp,
-                                "3PSIDMCSP": "0j0f03K6J009m00000001j0010s07wILM91p0q000R00tsw00B000J01bW71"
+                                "3PSIDMCSP": "0j0f03K6J009m00010001j0010s07wILM91p0q000R00tsw00B000J01bW71"
                             }
                         }
                         async with httpx.AsyncClient(timeout=30) as client:
@@ -108,8 +108,8 @@ async def process_account(semaphore):
             driver.quit()
 
 async def main():
-    semaphore = asyncio.Semaphore(1)  
-    tasks = [process_account(semaphore) for _ in range(100)] #accounts
+    semaphore = asyncio.Semaphore(2)  
+    tasks = [process_account(semaphore) for _ in range(100)]  
     await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
