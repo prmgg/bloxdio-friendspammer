@@ -2,6 +2,8 @@ import aiohttp
 import asyncio
 import json
 
+user = input("enter attack user: ")
+
 def read_cookies_and_api_type(file_path):
     cookies_list = []
     cookies = {}
@@ -88,10 +90,10 @@ async def send_friend_request():
                 "1PSID": cookies.get("1PSID", "N/A"),
                 "3PSIDMC": cookies.get("3PSIDMC", "default_value"),
                 "3PSIDMCPP": cookies.get("3PSIDMCPP", "default_value"),
-                "3PSIDMCSP": "0j0f03K6J009m00000001j0010s07wILM91p0q000R00tsw00B000J01bW71"
+                "3PSIDMCSP": "0j0f03K6J009m00010001j0010s07wILM91p0q000R00tsw00B000J01bW71"
             },
             "contents": {
-                "requestToPlayerName": "interactive"
+                "requestToPlayerName": user 
             }
         }
 
