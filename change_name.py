@@ -26,7 +26,7 @@ def generate_random_string():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=2))
 
 async def send_request(cookie_3psidmc, cookie_3psidmcpp):
-    url = "https://bloxd.io/name/update"
+    url = "https://bloxd.io/index/name/update"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
         "Accept": "application/json",
@@ -45,10 +45,10 @@ async def send_request(cookie_3psidmc, cookie_3psidmcpp):
             "3PSID": "N/A",
             "3PSIDMC": cookie_3psidmc,
             "3PSIDMCPP": cookie_3psidmcpp,
-            "3PSIDMCSP": "0j0f03K6J009m00000001j0010s07wILM91p0q000R00tsw00B000J01bW71"
+            "3PSIDMCSP": "0j0f03K6J009m00010001j0010s07wILM91p0q000R00tsw00B000J01bW71"
         },
         "contents": {
-            "name": f"{generate_random_string()}_Discord_x4nVvXed2c"
+            "name": f"{generate_random_string()}_Discord_ztsnMcQSjv"
         }
     }
 
