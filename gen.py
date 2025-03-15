@@ -1,5 +1,4 @@
 import asyncio
-import time
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
@@ -8,29 +7,33 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import httpx
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 options = Options()
 options.add_argument("--headless")
 options.set_preference("intl.accept_languages", "ja,en-US;q=0.7,en;q=0.3")
 
-def create_driver():
-    service = Service("C:\\geckodriver\\geckodriver.exe") #pass
-    return webdriver.Firefox(service=service, options=options)
+async def init_driver():
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: webdriver.Firefox(service=Service("C:\\geckodriver\\geckodriver.exe"), options=options))
 
-async def fetch_with_retries(client, url, headers, json, retries=3):
+async def fetch_retry(client, url, headers, data, retries=3):
     for attempt in range(retries):
         try:
-            response = await client.post(url, headers=headers, json=json)
+            response = await client.post(url, headers=headers, json=data)
             if response.status_code == 200:
                 return response.json()
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            logging.warning(f"Request error: {e}")
             if attempt < retries - 1:
                 await asyncio.sleep(5)
             else:
                 raise
     return None
 
-async def send_request(secure_3psidmc, client):
+async def send_request(cookie_val, client):
     metric_url = "https://bloxd.io/index/metrics/cookies"
     social_base_url = "https://social{social_id}.bloxd.io/social/get-social-information"
     headers = {
@@ -43,7 +46,7 @@ async def send_request(secure_3psidmc, client):
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
         "Priority": "u=4",
-        "Cookie": f"___Secure-3PSIDMC={secure_3psidmc}"
+        "Cookie": f"___Secure-3PSIDMC={cookie_val}"
     }
 
     metric_body = {
@@ -52,13 +55,13 @@ async def send_request(secure_3psidmc, client):
             "1PSID": "N/A",
             "3PAPISID": "N/A",
             "3PSID": "N/A",
-            "3PSIDMC": secure_3psidmc,
+            "3PSIDMC": cookie_val,
             "3PSIDMCPP": "N/A",
             "3PSIDMCSP": "0j0f03K6J009m11000001j0010s07wILM91p0q000R00tsw00B000J00bW71"
         }
     }
 
-    metric_data = await fetch_with_retries(client, metric_url, headers, metric_body)
+    metric_data = await fetch_retry(client, metric_url, headers, metric_body)
     if metric_data:
         metric_3psidmcpp = metric_data.get("3PSIDMCPP", "N/A")
         for social_id in range(1, 15):
@@ -69,23 +72,23 @@ async def send_request(secure_3psidmc, client):
                     "1PSID": "N/A",
                     "3PAPISID": "N/A",
                     "3PSID": "N/A",
-                    "3PSIDMC": secure_3psidmc,
+                    "3PSIDMC": cookie_val,
                     "3PSIDMCPP": metric_3psidmcpp,
                     "3PSIDMCSP": "0j0f03K6J009m11000001j0010s07wILM91p0q000R00tsw00B000J00bW71"
                 }
             }
-            social_response = await fetch_with_retries(client, social_url, headers, social_body)
+            social_response = await fetch_retry(client, social_url, headers, social_body)
             if social_response:
                 with open("cookie.txt", "a") as file:
-                    file.write(f"3PSIDMC={secure_3psidmc}\n")
+                    file.write(f"3PSIDMC={cookie_val}\n")
                     file.write(f"3PSIDMCPP={metric_3psidmcpp}\n")
                     file.write(f"api_type=social{social_id}\n\n")
-                print(f"Valid social API found: social{social_id}")
+                logging.info(f"Valid social API: social{social_id}")
                 return
             else:
-                print(f"Invalid social{social_id}: No valid response.")
+                logging.info(f"Invalid social{social_id}: No response.")
 
-async def process_account(semaphore, client, driver_pool):
+async def process(semaphore, client, driver_pool):
     async with semaphore:
         driver = await driver_pool.acquire()
         try:
@@ -98,17 +101,23 @@ async def process_account(semaphore, client, driver_pool):
             if secure_3psidmc:
                 await send_request(secure_3psidmc, client)
             else:
-                print("___Secure-3PSIDMC cookie not found.")
+                logging.warning("Cookie not found.")
         except TimeoutException:
-            print("Timeout occurred. Skipping...")
+            logging.error("Timeout. Skipping...")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
         finally:
             driver_pool.release(driver)
 
 class DriverPool:
     def __init__(self, size):
         self.pool = asyncio.Queue(maxsize=size)
-        for _ in range(size):
-            self.pool.put_nowait(create_driver())
+        self.size = size
+
+    async def init_drivers(self):
+        for _ in range(self.size):
+            driver = await init_driver()
+            await self.pool.put(driver)
 
     async def acquire(self):
         return await self.pool.get()
@@ -117,10 +126,11 @@ class DriverPool:
         self.pool.put_nowait(driver)
 
 async def main():
-    semaphore = asyncio.Semaphore(10) 
-    driver_pool = DriverPool(size=3)  
+    semaphore = asyncio.Semaphore(10)
+    driver_pool = DriverPool(size=3)
+    await driver_pool.init_drivers()
     async with httpx.AsyncClient(timeout=30) as client:
-        tasks = [process_account(semaphore, client, driver_pool) for _ in range(100)]
+        tasks = [process(semaphore, client, driver_pool) for _ in range(100)]
         await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
