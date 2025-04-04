@@ -1,23 +1,24 @@
-# Important Notes  
+# 重要な注意事項 
 
-### 1. 3PSIDMCSP Value  
-- The `3PSIDMCSP` value is **dynamic** and changes periodically.
-- Therefore, if you get a 420 error, please visit bloxd io to directly get the latest values ​​and replace them.
+### 1. 3PSIDMCSP の値 
+- `3PSIDMCSP` の値は **動的** であり、定期的に変更されます。
+- したがって、420 ​​エラーが発生した場合は、bloxd io にアクセスして最新の値を直接取得し、置き換えてください。
 
-### 2. Account Expiry  
-- Accounts have a limited validity period.  
-- Ensure that your account is active before running the script. You may need to renew or switch accounts periodically.  
+### 2. アカウントの有効期限 
+- アカウントには有効期限があります。
+- スクリプトを実行する前に、アカウントがアクティブであることを確認してください。定期的にアカウントを更新または切り替える必要がある場合があります。
 
-## Installation  
+## インストール 
 
-### 1. Install Geckodriver  
-Geckodriver is required for this project to work. Please follow the steps below:  
+### 1. Geckodriver のインストール 
+このプロジェクトが動作するには、Geckodriver が必要です。以下の手順に従ってください。
 
-#### On Windows  
-1. Download the latest Geckodriver from [Mozilla Geckodriver Releases](https://github.com/mozilla/geckodriver/releases).  
-2. Extract the downloaded file.  
-3. Add the Geckodriver directory to your system's `PATH` environment variable.  
+#### Windows の場合 
+1. [Mozilla Geckodriver Releases](https://github.com/mozilla/geckodriver/releases) から最新の Geckodriver をダウンロードします。
 
-#### On macOS  
+2. ダウンロードしたファイルを解凍します。
+ 3. システムの `PATH` 環境変数に Geckodriver ディレクトリを追加します。
+
+#### macOS の場合
 ```bash
 brew install geckodriver
